@@ -1,0 +1,10 @@
+[package]
+name = "tn"
+version = "0.1.5"
+edition = "2021"
+
+[dependencies]
+anyhow = "1.0.95"
+clap = { version = "4.5.27", features = ["derive"] }
+libc = "0.2.169"
+pyo3 = "0.23.4"
