@@ -85,7 +85,7 @@ def visit(el: Any) -> Any:
             module = importlib.import_module(module_path[:pos])
             component = getattr(module, module_path[pos + 1:])
             kwargs = dict([(k, v) for k, v in el.items() if not k.startswith('_') and not k.endswith('_')])
-            return component(**kwargs)()
+            return component(**kwargs)
         return el
     elif isinstance(el, list):
         return [visit(x) for x in el]
@@ -102,6 +102,6 @@ def execute(text: str, project_dir: str) -> None:
         print(json.dumps(config, indent=2))
         if '_component_' not in config:
             return
-        visit(config)
+        visit(config)()
     except Exception as e:
         traceback.print_exc()
