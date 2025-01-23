@@ -1,6 +1,6 @@
 [package]
 name = "tn"
-version = "0.1.5"
+version = "0.1.6"
 edition = "2021"
 description = "AI/ML"
 license = "MIT"
@@ -8,5 +8,6 @@ license = "MIT"
 [dependencies]
 anyhow = "1.0.95"
 clap = { version = "4.5.27", features = ["derive"] }
+indicatif = "0.17.9"
 libc = "0.2.169"
 pyo3 = "0.23.4"

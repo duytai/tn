@@ -4,7 +4,7 @@ import importlib
 import copy
 import json
 import traceback
-from rich import print as rprint
+from rich import print
 from typing import Dict, Any, List
 from pathlib import Path
 
@@ -97,7 +97,7 @@ def visit(el: Any) -> Any:
 def execute(text: str) -> None:
     try:
         config = yaml.safe_load(text)
-        rprint(json.dumps(config, indent=2))
+        print(json.dumps(config, indent=2))
         if '_component_' not in config:
             return
         visit(config)

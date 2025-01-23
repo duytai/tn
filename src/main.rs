@@ -6,7 +6,9 @@ use pyo3::prelude::*;
 use pyo3::types::*;
 use pyo3::Python;
 use std::ffi::CString;
-use libc::{fork, waitpid, getpid};
+use libc::{fork, waitpid};
+use indicatif::{ProgressBar, ProgressStyle, ProgressState};
+use std::{fmt::Write};
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
@@ -43,15 +45,12 @@ pub fn search_tn_file(searching_dir: PathBuf) -> Option<PathBuf> {
 }
 
 fn visit_config(yaml_file: String, project_dir: String, n_process: usize) -> Result<()>{
-    let manifest_dir = std::env::var("CARGO_MANIFEST_DIR")
-        .expect("CARGO_MANIFEST_DIR environment variable is not set");
-    let script_file = PathBuf::from(&manifest_dir).join("src/script.py");
-    let py_code = fs::read_to_string(&script_file)?;
+    let py_code = include_str!("script.py");
     pyo3::prepare_freethreaded_python();
 
     let mut tasks = Python::with_gil(|py| -> Result<Vec<String>> {
         let globals = PyDict::new(py);
-        let py_code = CString::new(py_code.clone())?;
+        let py_code = CString::new(py_code)?;
         py.run(py_code.as_c_str(), Some(&globals), Some(&globals))?;
         if let Some(fn_sweep) = globals.get_item("sweep")? {
             let yaml_file = PyString::new(py, &yaml_file);
@@ -63,9 +62,13 @@ fn visit_config(yaml_file: String, project_dir: String, n_process: usize) -> Res
         Ok(vec![])
     })?;
 
-    println!("    number of tasks: {}", tasks.len());
-    println!("number of processes: {}", n_process);
+    // println!("    number of tasks: {}", tasks.len());
+    // println!("number of processes: {}", n_process);
 
+    let bar= ProgressBar::new(tasks.len() as u64);
+    bar.set_style(ProgressStyle::with_template("{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({eta})")?
+        .with_key("eta", |state: &ProgressState, w: &mut dyn Write| write!(w, "{:.1}s", state.eta().as_secs_f64()).unwrap())
+        .progress_chars("#>-"));
     let mut active_processes = 0;
     while active_processes > 0 || !tasks.is_empty() {
         while active_processes < n_process && !tasks.is_empty() {
@@ -75,7 +78,7 @@ fn visit_config(yaml_file: String, project_dir: String, n_process: usize) -> Res
                     if pid == 0 {
                         return Python::with_gil(|py| -> Result<()> {
                             let globals = PyDict::new(py);
-                            let py_code = CString::new(py_code.clone())?;
+                            let py_code = CString::new(py_code)?;
                             py.run(py_code.as_c_str(), Some(&globals), Some(&globals))?;
                             if let Some(fn_execute) = globals.get_item("execute")? {
                                 let task = PyString::new(py, &task);
@@ -97,15 +100,12 @@ fn visit_config(yaml_file: String, project_dir: String, n_process: usize) -> Res
             let mut status = 0;
             let pid = waitpid(-1, &mut status, 0);
             if pid > 0 {
+                bar.inc(1);
                 active_processes -= 1;
             }
         }
     }
-
-    unsafe {
-        println!("all tasks completed, parent process (PID: {}) exiting.", getpid());
-    }
-
+    bar.finish_with_message("done");
     Ok(())
 }
 
