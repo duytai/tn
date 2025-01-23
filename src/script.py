@@ -94,8 +94,10 @@ def visit(el: Any) -> Any:
     else:
         raise ValueError(f'unknown type: {el}')
 
-def execute(text: str) -> None:
+def execute(text: str, project_dir: str) -> None:
     try:
+        if project_dir not in sys.path:
+            sys.path.append(project_dir)
         config = yaml.safe_load(text)
         print(json.dumps(config, indent=2))
         if '_component_' not in config:

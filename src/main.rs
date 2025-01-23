@@ -82,7 +82,8 @@ fn visit_config(yaml_file: String, project_dir: String, n_process: usize) -> Res
                             py.run(py_code.as_c_str(), Some(&globals), Some(&globals))?;
                             if let Some(fn_execute) = globals.get_item("execute")? {
                                 let task = PyString::new(py, &task);
-                                let args = PyTuple::new(py, &[task])?;
+                                let project_dir = PyString::new(py, &project_dir);
+                                let args = PyTuple::new(py, &[task, project_dir])?;
                                 fn_execute.call1(args)?;
                                 return Ok(())
                             }
