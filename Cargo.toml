@@ -2,6 +2,8 @@
 name = "tn"
 version = "0.1.5"
 edition = "2021"
+description = "AI/ML"
+license = "MIT"
 
 [dependencies]
 anyhow = "1.0.95"
