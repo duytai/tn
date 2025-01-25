@@ -2,11 +2,12 @@ import sys
 import yaml
 import importlib
 import copy
-import json
-import traceback
-from rich import print
 from typing import Dict, Any, List
 from pathlib import Path
+from rich.console import Console
+from rich import print_json
+
+console = Console()
 
 def merge_dot_path(
     base_dict: Dict,
@@ -71,7 +72,7 @@ def sweep(yaml_file: str, project_dir: str) -> List[str]:
             result.append(conf_str)
         return result
     except Exception as e:
-        traceback.print_exc()
+        console.print_exception(show_locals=True)
     return []
 
 def visit(el: Any) -> Any:
@@ -99,9 +100,9 @@ def execute(text: str, project_dir: str) -> None:
         if project_dir not in sys.path:
             sys.path.append(project_dir)
         config = yaml.safe_load(text)
-        print(json.dumps(config, indent=2))
+        print_json(data=config)
         if '_component_' not in config:
             return
         visit(config)()
     except Exception as e:
-        traceback.print_exc()
+        console.print_exception(show_locals=True)
