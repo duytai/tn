@@ -9,6 +9,7 @@ use std::ffi::CString;
 use libc::{fork, waitpid};
 use indicatif::{ProgressBar, ProgressStyle, ProgressState};
 use std::{fmt::Write};
+use std::collections::VecDeque;
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
@@ -48,7 +49,7 @@ fn visit_config(yaml_file: String, project_dir: String, n_process: usize) -> Res
     let py_code = include_str!("script.py");
     pyo3::prepare_freethreaded_python();
 
-    let mut tasks = Python::with_gil(|py| -> Result<Vec<String>> {
+    let tasks = Python::with_gil(|py| -> Result<Vec<String>> {
         let globals = PyDict::new(py);
         let py_code = CString::new(py_code)?;
         py.run(py_code.as_c_str(), Some(&globals), Some(&globals))?;
@@ -61,9 +62,7 @@ fn visit_config(yaml_file: String, project_dir: String, n_process: usize) -> Res
         }
         Ok(vec![])
     })?;
-
-    // println!("    number of tasks: {}", tasks.len());
-    // println!("number of processes: {}", n_process);
+    let mut tasks = tasks.into_iter().collect::<VecDeque<_>>();
 
     let bar= ProgressBar::new(tasks.len() as u64);
     bar.set_style(ProgressStyle::with_template("{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({eta})")?
@@ -72,7 +71,7 @@ fn visit_config(yaml_file: String, project_dir: String, n_process: usize) -> Res
     let mut active_processes = 0;
     while active_processes > 0 || !tasks.is_empty() {
         while active_processes < n_process && !tasks.is_empty() {
-            if let Some(task) = tasks.pop() {
+            if let Some(task) = tasks.pop_front() {
                 unsafe {
                     let pid = fork();
                     if pid == 0 {

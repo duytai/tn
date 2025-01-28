@@ -8,6 +8,7 @@ from rich.console import Console
 from rich import print_json
 
 console = Console()
+refs = {}
 
 def merge_dot_path(
     base_dict: Dict,
@@ -71,7 +72,7 @@ def sweep(yaml_file: str, project_dir: str) -> List[str]:
             conf_str = yaml.safe_dump(tmp, default_flow_style=False)
             result.append(conf_str)
         return result
-    except Exception as e:
+    except Exception as _e:
         console.print_exception(show_locals=True)
     return []
 
@@ -82,11 +83,21 @@ def visit(el: Any) -> Any:
             module_path = el['_component_'].strip()
             if '.' not in module_path or module_path.startswith('.') or module_path.endswith('.'):
                 raise ValueError(f'invalid module path: {module_path}')
+            # return existing component
+            if '_id_' in el and module_path in refs:
+                if el['_id_'] in refs[module_path]:
+                    return refs[module_path][el['_id_']]
             pos = module_path.rfind('.')
             module = importlib.import_module(module_path[:pos])
             component = getattr(module, module_path[pos + 1:])
             kwargs = dict([(k, v) for k, v in el.items() if not k.startswith('_') and not k.endswith('_')])
-            return component(**kwargs)
+            ref = component(**kwargs)
+            # store new component
+            if '_id_' in el:
+                if module_path not in refs:
+                    refs[module_path] = {}
+                refs[module_path][el['_id_']] = ref
+            return ref
         return el
     elif isinstance(el, list):
         return [visit(x) for x in el]
@@ -104,5 +115,5 @@ def execute(text: str, project_dir: str) -> None:
         if '_component_' not in config:
             return
         visit(config)()
-    except Exception as e:
+    except Exception as _e:
         console.print_exception(show_locals=True)
