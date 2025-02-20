@@ -8,5 +8,5 @@ Features:
 - [x] Dependency injection (`_component_`)
 - [x] Multi-run (`_sweep_`)
 - [x] Yaml anchors and aliases (`&name` and `*name`)
-- [ ] Component reference  (`_id_`)
+- [x] Component reference  (`_id_`)
 
