@@ -50,6 +50,10 @@ def sweep(yaml_file: str, project_dir: str) -> List[str]:
         if project_dir not in sys.path:
             sys.path.append(project_dir)
         config = yaml.safe_load(Path(yaml_file).read_text())
+
+        # resolve relative module paths
+        sys.path.append(str((Path.cwd() / yaml_file).parent))
+
         if '_sweep_' not in config:
             conf_str = yaml.safe_dump(config, default_flow_style=False)
             return [conf_str]
