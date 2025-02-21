@@ -21,7 +21,7 @@ struct CliArgs {
     #[arg(short, long, default_value = "1")]
     /// Number of processes
     n_process: usize,
-    #[arg(short, long, default_value = "true")]
+    #[arg(short, long, default_value = "false")]
     /// Run sweep
     sweep: bool,
 }
@@ -48,7 +48,7 @@ pub fn search_tn_file(searching_dir: PathBuf) -> Option<PathBuf> {
     }
 }
 
-fn visit_config(yaml_file: String, project_dir: String, n_process: usize) -> Result<()>{
+fn visit_config(yaml_file: String, project_dir: String, n_process: usize, sweep_only: bool) -> Result<()>{
     let mut output_dir = std::env::current_dir()?;
     output_dir.push(&yaml_file);
     output_dir.set_extension("");
@@ -88,8 +88,9 @@ fn visit_config(yaml_file: String, project_dir: String, n_process: usize) -> Res
                             let py_code = CString::new(py_code)?;
                             py.run(py_code.as_c_str(), Some(&globals), Some(&globals))?;
                             if let Some(fn_execute) = globals.get_item("execute")? {
-                                let task = PyString::new(py, &task);
-                                let args = PyTuple::new(py, &[task])?;
+                                let task = PyString::new(py, &task).to_object(py);
+                                let sweep_only = PyBool::new(py, sweep_only).to_object(py);
+                                let args = PyTuple::new(py, &[task, sweep_only])?;
                                 fn_execute.call1(args)?;
                                 return Ok(())
                             }
@@ -127,7 +128,7 @@ fn main() -> Result<()> {
                 .and_then(|p| p.to_str())
                 .and_then(|p| Some(p.to_string()))
                 .unwrap();
-            visit_config(yaml_file, project_dir, args.n_process)
+            visit_config(yaml_file, project_dir, args.n_process, args.sweep)
         } else {
             Err(anyhow!("not a tn repository (or any of the parent directories): .tn.yaml"))
         }

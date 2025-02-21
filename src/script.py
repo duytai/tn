@@ -106,11 +106,11 @@ def visit(el: Any) -> Any:
     else:
         raise ValueError(f'unknown type: {el}')
 
-def execute(text: str) -> None:
+def execute(text: str, sweep_only: bool) -> None:
     try:
         config = yaml.safe_load(text)
         print_json(data=config)
-        if '_component_' not in config:
+        if '_component_' not in config or sweep_only:
             return
         visit(config)()
     except Exception as _e:
