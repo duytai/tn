@@ -10,11 +10,7 @@ from rich import print_json
 console = Console()
 refs = {}
 
-def merge_dot_path(
-    base_dict: Dict,
-    dot_path: str,
-    value: Any
-) -> None:
+def merge_dot_path(base_dict: Dict, dot_path: str, value: Any) -> None:
     keys = dot_path.split('.')
     current = base_dict
 
@@ -110,10 +106,8 @@ def visit(el: Any) -> Any:
     else:
         raise ValueError(f'unknown type: {el}')
 
-def execute(text: str, project_dir: str) -> None:
+def execute(text: str) -> None:
     try:
-        if project_dir not in sys.path:
-            sys.path.append(project_dir)
         config = yaml.safe_load(text)
         print_json(data=config)
         if '_component_' not in config:

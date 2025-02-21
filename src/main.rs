@@ -21,6 +21,9 @@ struct CliArgs {
     #[arg(short, long, default_value = "1")]
     /// Number of processes
     n_process: usize,
+    #[arg(short, long, default_value = "true")]
+    /// Run sweep
+    sweep: bool,
 }
 
 #[derive(Subcommand, Debug)]
@@ -46,6 +49,11 @@ pub fn search_tn_file(searching_dir: PathBuf) -> Option<PathBuf> {
 }
 
 fn visit_config(yaml_file: String, project_dir: String, n_process: usize) -> Result<()>{
+    let mut output_dir = std::env::current_dir()?;
+    output_dir.push(&yaml_file);
+    output_dir.set_extension("");
+    fs::create_dir_all(&output_dir)?;
+
     let py_code = include_str!("script.py");
     pyo3::prepare_freethreaded_python();
 
@@ -81,8 +89,7 @@ fn visit_config(yaml_file: String, project_dir: String, n_process: usize) -> Res
                             py.run(py_code.as_c_str(), Some(&globals), Some(&globals))?;
                             if let Some(fn_execute) = globals.get_item("execute")? {
                                 let task = PyString::new(py, &task);
-                                let project_dir = PyString::new(py, &project_dir);
-                                let args = PyTuple::new(py, &[task, project_dir])?;
+                                let args = PyTuple::new(py, &[task])?;
                                 fn_execute.call1(args)?;
                                 return Ok(())
                             }
