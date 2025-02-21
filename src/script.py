@@ -2,6 +2,7 @@ import sys
 import yaml
 import importlib
 import copy
+import os
 from typing import Dict, Any, List
 from pathlib import Path
 from rich.console import Console
@@ -43,6 +44,9 @@ def merge_dot_path(base_dict: Dict, dot_path: str, value: Any) -> None:
 
 def sweep(yaml_file: str, project_dir: str) -> List[str]:
     try:
+        working_dir = Path(yaml_file).parent / Path(yaml_file).stem
+        os.environ['WORKING_DIR'] = str(working_dir)
+
         if project_dir not in sys.path:
             sys.path.append(project_dir)
         config = yaml.safe_load(Path(yaml_file).read_text())

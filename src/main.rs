@@ -49,11 +49,6 @@ pub fn search_tn_file(searching_dir: PathBuf) -> Option<PathBuf> {
 }
 
 fn visit_config(yaml_file: String, project_dir: String, n_process: usize, sweep_only: bool) -> Result<()>{
-    let mut output_dir = std::env::current_dir()?;
-    output_dir.push(&yaml_file);
-    output_dir.set_extension("");
-    fs::create_dir_all(&output_dir)?;
-
     let py_code = include_str!("script.py");
     pyo3::prepare_freethreaded_python();
 
@@ -128,6 +123,7 @@ fn main() -> Result<()> {
                 .and_then(|p| p.to_str())
                 .and_then(|p| Some(p.to_string()))
                 .unwrap();
+            let yaml_file = format!("{}/{}", current_dir.display(), yaml_file);
             visit_config(yaml_file, project_dir, args.n_process, args.sweep)
         } else {
             Err(anyhow!("not a tn repository (or any of the parent directories): .tn.yaml"))
