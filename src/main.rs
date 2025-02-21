@@ -6,7 +6,7 @@ use pyo3::prelude::*;
 use pyo3::types::*;
 use pyo3::Python;
 use std::ffi::CString;
-use libc::{dirname, fork, waitpid};
+use libc::{fork, waitpid};
 use indicatif::{ProgressBar, ProgressStyle, ProgressState};
 use std::{fmt::Write};
 use std::collections::VecDeque;
