@@ -6,7 +6,7 @@ use pyo3::prelude::*;
 use pyo3::types::*;
 use pyo3::Python;
 use std::ffi::CString;
-use libc::{fork, waitpid};
+use libc::{dirname, fork, waitpid};
 use indicatif::{ProgressBar, ProgressStyle, ProgressState};
 use std::{fmt::Write};
 use std::collections::VecDeque;
@@ -32,16 +32,16 @@ enum Command {
     Init,
 }
 
-pub fn search_tn_file(searching_dir: PathBuf) -> Option<PathBuf> {
-    let file_name = ".tn.yaml";
-    if searching_dir.join(&file_name).exists() {
-        Some(searching_dir.join(file_name))
+pub fn search_tn_dir(searching_dir: PathBuf) -> Option<PathBuf> {
+    let dirname = ".tn/";
+    if searching_dir.join(&dirname).exists() {
+        Some(searching_dir.join(dirname))
     } else {
         let mut parent_directory = searching_dir;
         for _ in 0..parent_directory.iter().count() {
             parent_directory.pop();
-            if parent_directory.join(&file_name).exists() {
-                return Some(parent_directory.join(&file_name))
+            if parent_directory.join(&dirname).exists() {
+                return Some(parent_directory.join(&dirname))
             }
         }
         None
@@ -115,10 +115,10 @@ fn visit_config(yaml_file: String, project_dir: String, n_process: usize, sweep_
 fn main() -> Result<()> {
     let args = CliArgs::parse();
     let current_dir = std::env::current_dir()?;
-    let tn_file = search_tn_file(current_dir.clone());
+    let tn_dir = search_tn_dir(current_dir.clone());
 
     if let Some(yaml_file) = args.yaml_file {
-        return if let Some(f) = tn_file {
+        return if let Some(f) = tn_dir {
             let project_dir = f.parent()
                 .and_then(|p| p.to_str())
                 .and_then(|p| Some(p.to_string()))
@@ -126,19 +126,19 @@ fn main() -> Result<()> {
             let yaml_file = format!("{}/{}", current_dir.display(), yaml_file);
             visit_config(yaml_file, project_dir, args.n_process, args.sweep)
         } else {
-            Err(anyhow!("not a tn repository (or any of the parent directories): .tn.yaml"))
+            Err(anyhow!("not a tn repository (or any of the parent directories): .tn/"))
         }
     }
 
     if let Some(command) = args.command {
         return match command {
             Command::Init => {
-                match tn_file {
-                    Some(f) => Err(anyhow!("already initialized: {}", f.display())),
+                match tn_dir {
+                    Some(d) => Err(anyhow!("already initialized: {}", d.display())),
                     None => {
-                        let f = current_dir.join(".tn.yaml");
-                        fs::File::create(&f)?;
-                        println!("created tn file: {}", f.display());
+                        let tn_dir = current_dir.join(".tn/");
+                        fs::create_dir_all(&tn_dir)?;
+                        println!("created tn dir: {}", tn_dir.display());
                         Ok(())
                     }
                 }
