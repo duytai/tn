@@ -44,8 +44,8 @@ def merge_dot_path(base_dict: Dict, dot_path: str, value: Any) -> None:
 
 def sweep(yaml_file: str, project_dir: str) -> List[str]:
     try:
-        working_dir = Path(yaml_file).parent / Path(yaml_file).stem
-        os.environ['WORKING_DIR'] = str(working_dir)
+        output_dir = Path(yaml_file).parent / Path(yaml_file).stem
+        os.environ['OUTPUT_DIR'] = str(output_dir)
 
         if project_dir not in sys.path:
             sys.path.append(project_dir)
@@ -112,6 +112,7 @@ def visit(el: Any) -> Any:
 
 def execute(text: str, sweep_only: bool) -> None:
     try:
+        os.environ['CONFIG'] = text
         config = yaml.safe_load(text)
         print_json(data=config)
         if '_component_' not in config or sweep_only:
