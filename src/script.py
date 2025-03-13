@@ -1,8 +1,9 @@
 import sys
 import yaml
-import importlib
 import copy
 import os
+from types import ModuleType
+from importlib import import_module
 from typing import Dict, Any, List
 from pathlib import Path
 from rich.console import Console
@@ -10,6 +11,60 @@ from rich import print_json
 
 console = Console()
 refs = {}
+
+def component_from_module_path(path: str):
+    if path == '':
+        raise ValueError('Empty path')
+    parts = [part for part in path.split('.')]
+    for part in parts:
+        # If a relative path is passed in, the first part will be empty
+        if not len(part):
+            raise ValueError(
+                f"Error loading '{path}': invalid dotstring."
+                + "\nRelative imports are not supported."
+            )
+    # First module requires trying to import to validate
+    part0 = parts[0]
+    try:
+        obj = import_module(part0)
+    except ImportError as exc_import:
+        raise ValueError(
+            f"Error loading '{path}':\n{repr(exc_import)}"
+            + f"\nAre you sure that module '{part0}' is installed?"
+        ) from exc_import
+    # Subsequent components can be checked via getattr() on first module
+    # It can either be an attribute that we can return or a submodule that we
+    # can import and continue searching
+    for m in range(1, len(parts)):
+        part = parts[m]
+        try:
+            obj = getattr(obj, part)
+        # If getattr fails, check to see if it's a module we can import and
+        # continue down the path
+        except AttributeError as exc_attr:
+            parent_dotpath = '.'.join(parts[:m])
+            if isinstance(obj, ModuleType):
+                mod = '.'.join(parts[: m + 1])
+                try:
+                    obj = import_module(mod)
+                    continue
+                except ModuleNotFoundError as exc_import:
+                    raise ValueError(
+                        f"Error loading '{path}':\n{repr(exc_import)}"
+                        + f"\nAre you sure that '{part}' is importable from module '{parent_dotpath}'?"
+                    ) from exc_import
+                # Any other error trying to import module can be raised as
+                # InstantiationError
+                except Exception as exc_import:
+                    raise ValueError(
+                        f"Error loading '{path}':\n{repr(exc_import)}"
+                    ) from exc_import
+            # If the component is not an attribute nor a module, it doesn't exist
+            raise ValueError(
+                f"Error loading '{path}':\n{repr(exc_attr)}"
+                + f"\nAre you sure that '{part}' is an attribute of '{parent_dotpath}'?"
+            ) from exc_attr
+    return obj
 
 def merge_dot_path(base_dict: Dict, dot_path: str, value: Any) -> None:
     keys = dot_path.split('.')
@@ -61,9 +116,7 @@ def sweep(yaml_file: str, project_dir: str) -> List[str]:
         module_path = config['_sweep_'].strip()
         if '.' not in module_path or module_path.startswith('.') or module_path.endswith('.'):
             raise ValueError(f'invalid module path: {module_path}')
-        pos = module_path.rfind('.')
-        module = importlib.import_module(module_path[:pos])
-        component = getattr(module, module_path[pos + 1:])
+        component = component_from_module_path(module_path)
         output = component()()
         if not isinstance(output, list):
             output = []
@@ -91,9 +144,7 @@ def visit(el: Any) -> Any:
             if '_id_' in el and module_path in refs:
                 if el['_id_'] in refs[module_path]:
                     return refs[module_path][el['_id_']]
-            pos = module_path.rfind('.')
-            module = importlib.import_module(module_path[:pos])
-            component = getattr(module, module_path[pos + 1:])
+            component = component_from_module_path(module_path)
             kwargs = dict([(k, v) for k, v in el.items() if not k.startswith('_') and not k.endswith('_')])
             ref = component(**kwargs)
             # store new component
