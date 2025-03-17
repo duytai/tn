@@ -99,9 +99,6 @@ def merge_dot_path(base_dict: Dict, dot_path: str, value: Any) -> None:
 
 def sweep(yaml_file: str, project_dir: str) -> List[str]:
     try:
-        output_dir = Path(yaml_file).parent / Path(yaml_file).stem
-        os.environ['OUTPUT_DIR'] = str(output_dir)
-
         if project_dir not in sys.path:
             sys.path.append(project_dir)
         config = yaml.safe_load(Path(yaml_file).read_text())
@@ -113,11 +110,7 @@ def sweep(yaml_file: str, project_dir: str) -> List[str]:
             conf_str = yaml.safe_dump(config, default_flow_style=False)
             return [conf_str]
 
-        module_path = config['_sweep_'].strip()
-        if '.' not in module_path or module_path.startswith('.') or module_path.endswith('.'):
-            raise ValueError(f'invalid module path: {module_path}')
-        component = component_from_module_path(module_path)
-        output = component()()
+        output = visit(config['_sweep_'])()
         if not isinstance(output, list):
             output = []
 
