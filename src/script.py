@@ -145,8 +145,9 @@ def visit(el: Any) -> Any:
                 if el['_id_'] in refs[module_path]:
                     return refs[module_path][el['_id_']]
             component = component_from_module_path(module_path)
+            args = el.get('_args_', [])
             kwargs = dict([(k, v) for k, v in el.items() if not k.startswith('_') and not k.endswith('_')])
-            ref = component(**kwargs)
+            ref = component(*args, **kwargs)
             # store new component
             if '_id_' in el:
                 if module_path not in refs:
