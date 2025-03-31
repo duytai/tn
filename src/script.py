@@ -10,7 +10,6 @@ from rich.console import Console
 from rich import print_json
 
 console = Console()
-refs = {}
 
 def component_from_module_path(path: str):
     if path == '':
@@ -126,27 +125,24 @@ def sweep(yaml_file: str, project_dir: str) -> List[str]:
         console.print_exception(show_locals=True)
     return []
 
+def read_yaml(f) -> Dict:
+    return yaml.safe_load(read_text(f))
+
+def read_text(f) -> str:
+    return Path(f).read_text()
+
 def visit(el: Any) -> Any:
     if isinstance(el, dict):
         el = dict([(k, visit(v)) for k, v in el.items()])
         if '_component_' in el:
             module_path = el['_component_'].strip()
-            if '.' not in module_path or module_path.startswith('.') or module_path.endswith('.'):
-                raise ValueError(f'invalid module path: {module_path}')
-            # return existing component
-            if '_id_' in el and module_path in refs:
-                if el['_id_'] in refs[module_path]:
-                    return refs[module_path][el['_id_']]
-            component = component_from_module_path(module_path)
+            if module_path in globals():
+                component = globals().get(module_path)
+            else:
+                component = component_from_module_path(module_path)
             args = el.get('_args_', [])
             kwargs = dict([(k, v) for k, v in el.items() if not k.startswith('_') and not k.endswith('_')])
-            ref = component(*args, **kwargs)
-            # store new component
-            if '_id_' in el:
-                if module_path not in refs:
-                    refs[module_path] = {}
-                refs[module_path][el['_id_']] = ref
-            return ref
+            return component(*args, **kwargs)
         return el
     elif isinstance(el, list):
         return [visit(x) for x in el]
