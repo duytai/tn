@@ -125,10 +125,13 @@ def sweep(yaml_file: str, project_dir: str) -> List[str]:
         console.print_exception(show_locals=True)
     return []
 
-def read_yaml(f) -> Dict:
+def visit_yaml(f: str) -> Any:
+    return visit(read_yaml(f))
+
+def read_yaml(f: str) -> Dict:
     return yaml.safe_load(read_text(f))
 
-def read_text(f) -> str:
+def read_text(f: str) -> str:
     return Path(f).read_text()
 
 def visit(el: Any) -> Any:
